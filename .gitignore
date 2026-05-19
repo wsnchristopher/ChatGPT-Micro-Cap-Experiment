@@ -1,4 +1,13 @@
 CLAUDE.md
-venv
-.idea
-__pycache__
+
+.env
+.cache/
+
+venv/
+.venv/
+
+.idea/
+.vscode/
+
+__pycache__/
+*.pyc
