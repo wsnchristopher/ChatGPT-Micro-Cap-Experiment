@@ -290,27 +290,17 @@ STRICT RULE:
 # MAIN FUNCTION
 # -------------------------------------------------------------------
 
-def create_daily_prompt(libb: LIBBmodel):
-    today = libb.run_date
-
+def assemble_daily_prompt_skeleton():
+    
     macro_news = get_macro_news()
-    portfolio_state = libb.portfolio
-    portfolio_eligibility = build_eligibility_series(portfolio_state["ticker"])
-    execution_log = libb.recent_execution_logs()
-
-    if execution_log.empty:
-        execution_log = "No recent trade logs."
 
     prompt = (
-        SYSTEM_HEADER.format(today=today)
+        SYSTEM_HEADER
         + TRADING_CADENCE
         + UNIVERSE_RULES
         + INPUT_BLOCK
         + GIVEN_DATA.format(
             MACRO_NEWS=macro_news,
-            PORTFOLIO_STATE=portfolio_state,
-            TRADE_EXECUTION_LOG=execution_log,
-            PORTFOLIO_TICKER_ELIGIBILITY=portfolio_eligibility,
         )
         + ORDER_SPEC_FORMAT
         + "\n"

@@ -278,22 +278,14 @@ STRICT RULE:
 # MAIN FUNCTION
 # -------------------------------------------------------------------
 
-def create_deep_research_prompt(libb: LIBBmodel):
-    today = libb.run_date
-
+def assemble_deep_research_prompt_skeleton() -> str:
+    
     macro_news = get_macro_news()
 
     ipo_universe = get_ipo_universe()
     formatted_ipo_universe = format_universe_for_prompt(ipo_universe)
 
     ipo_universe_eligibility = build_eligibility_series_from_universe(ipo_universe)
-
-    portfolio_state = libb.portfolio
-    portfolio_tickers_eligibility = build_eligibility_series(portfolio_state["ticker"])
-    execution_log = libb.recent_execution_logs()
-
-    if execution_log.empty:
-        execution_log = "No recent trade logs."
 
     # Normalize IPO universe formatting (prevents model confusion)
     if hasattr(ipo_universe, "to_string"):
@@ -302,7 +294,7 @@ def create_deep_research_prompt(libb: LIBBmodel):
         ipo_universe = str(ipo_universe)
 
     prompt = (
-        SYSTEM_HEADER.format(today=today)
+        SYSTEM_HEADER
         + TRADING_CADENCE
         + UNIVERSE_RULES
         + INPUT_BLOCK
@@ -310,9 +302,6 @@ def create_deep_research_prompt(libb: LIBBmodel):
             MACRO_NEWS=macro_news,
             IPO_UNIVERSE=formatted_ipo_universe,
             IPO_TICKER_ELIGIBILITY=ipo_universe_eligibility,
-            PORTFOLIO_STATE=portfolio_state,
-            PORTFOLIO_TICKER_ELIGIBILITY=portfolio_tickers_eligibility,
-            TRADE_EXECUTION_LOG=execution_log,
 
 
         )
