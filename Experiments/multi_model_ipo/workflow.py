@@ -37,6 +37,7 @@ def weekly_flow(date):
         libb.analyze_sentiment(deep_research_report)
     return
 
+
 def daily_flow(date):
 
     skeleton = assemble_daily_prompt_skeleton()
@@ -50,6 +51,27 @@ def daily_flow(date):
         libb.save_daily_update(daily_report)
 
         orders_json = parse_json(daily_report, "ORDERS_JSON")
+
+        filtered_orders, rejected_orders = filter_orders(orders_json)
+        if rejected_orders:
+            save_rejections(libb, rejected_orders)
+
+        libb.save_orders(filtered_orders)
+    return
+
+def starting_flow(date):
+
+    prompt = create_starting_prompt()
+
+    for model in MODELS:
+        libb = LIBBmodel(f"Experiments/multi_model_ipo/artifacts/{model}", run_date=date)
+        libb.process_portfolio()
+        starting_report, prompt = prompt_starting_report(prompt, libb)
+        libb.save_prompt(prompt)
+        libb.analyze_sentiment(starting_report)
+        libb.save_deep_research(starting_report)
+
+        orders_json = parse_json(starting_report, "ORDERS_JSON")
 
         filtered_orders, rejected_orders = filter_orders(orders_json)
         if rejected_orders:
