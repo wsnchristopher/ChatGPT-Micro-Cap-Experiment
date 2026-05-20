@@ -45,12 +45,9 @@ def prompt_chatgpt(text: str, model: str = "gpt-4.1-mini") -> str:
     return content
 
 def prompt_deep_research(skeleton, libb) -> tuple[str, str]:
+    
     model = libb._model_path.replace("Experiments/multi_model_ipo/artifacts/", "")
-    # TODO: REPLACE 
-    if str(libb.run_date) == "2026-05-18":
-        text = create_starting_prompt()
-    else:
-        text = create_deep_research_prompt(skeleton, libb)
+    text = create_deep_research_prompt(skeleton, libb)
         
     if model == "deepseek":
         return prompt_deepseek(text), text
@@ -60,12 +57,21 @@ def prompt_deep_research(skeleton, libb) -> tuple[str, str]:
         raise RuntimeError(f"Unidentified model: {model}")
 
 def prompt_daily_report(skeleton, libb) -> tuple[str, str]:
+
     model = libb._model_path.replace("Experiments/multi_model_ipo/artifacts/", "")
-    # TODO: REPLACE
-    if str(libb.run_date) == "2026-05-18":
-        text = create_starting_prompt()
+    text = create_daily_prompt(skeleton, libb)
+    if model == "deepseek":
+        return prompt_deepseek(text), text
+    elif model == "gpt-4.1":
+        return prompt_chatgpt(text), text
     else:
-        text = create_daily_prompt(skeleton, libb)
+        raise RuntimeError(f"Unidentified model: {model}")
+    
+def prompt_starting_report(libb: LIBBmodel):
+
+    model = libb._model_path.replace("Experiments/multi_model_ipo/artifacts/", "")
+    text = create_starting_prompt()
+
     if model == "deepseek":
         return prompt_deepseek(text), text
     elif model == "gpt-4.1":
