@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sqlite3
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -301,7 +301,7 @@ def _get_rejection_reasons(
 def filter_orders(
     orders: dict,
     max_workers: int = 8,
-) -> tuple[dict, list[dict] | None]:
+) -> tuple[list[dict] | None, list[dict] | None]:
     order_list = orders.get("orders", [])
 
     filtered_orders = []
@@ -311,42 +311,34 @@ def filter_orders(
     # PRELOAD UNIQUE TICKERS DETERMINISTICALLY
     # =====================================================
 
-    unique_tickers = sorted(
-        {
-            _normalize_ticker(o.get("ticker"))
-            for o in order_list
-            if o.get("ticker")
-        }
-    )
-
     # =====================================================
     # FILTER LOOP
     # =====================================================
 
-    for order in order_list:
-        action = order.get("action")
+    def _process_order(order: dict) -> tuple[dict, str]:
 
-        # only reject BUY orders
+        action = order.get("action")
         if action != "b":
-            filtered_orders.append(order)
-            continue
+            return order, "pass"
 
         reasons = _get_rejection_reasons(order)
-
         if reasons:
-            rejected_orders.append(
-                {
-                    **order,
-                    "rejection_reasons": reasons,
-                }
-            )
-        else:
-            filtered_orders.append(order)
+            return {**order, "rejection_reasons": reasons}, "reject"
+        return order, "pass"
 
-    return (
-        {"orders": filtered_orders},
-        rejected_orders or None,
-    )
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = []
+        for order in orders:
+            future = ex.submit(_process_order, order)
+            futures.append(future)
+    
+        for fut in as_completed(futures):
+            order, status = fut.result()
+            if status == "reject":
+                rejected_orders.append(order)
+            else:
+                filtered_orders.append(order)
+    return filtered_orders, rejected_orders
 
 
 if __name__ == "__main__":
