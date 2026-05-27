@@ -59,6 +59,10 @@ def daily_flow(date):
             save_rejections(libb, rejected_orders)
 
         libb.save_orders(filtered_orders)
+                
+                
+        libb.analyze_sentiment(daily_report, report_type="daily_report")
+
     return
 
 def starting_flow(date):
@@ -80,6 +84,9 @@ def starting_flow(date):
             save_rejections(libb, rejected_orders)
 
         libb.save_orders(filtered_orders)
+
+        libb.analyze_sentiment(starting_report, report_type="starting_research")
+
     return
 
 def main():
