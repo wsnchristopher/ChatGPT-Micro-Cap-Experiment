@@ -106,7 +106,7 @@ def build_eligibility_series(
     elif isinstance(tickers, list):
         if tickers and isinstance(tickers[0], dict):
             # if tickers is list[dict]
-            tickers = [item["ticker"] for item in tickers]
+            return build_eligibility_series_from_universe(tickers)
 
     elif not isinstance(tickers, Iterable):
         tickers = [str(tickers)]
@@ -130,14 +130,17 @@ def build_eligibility_series(
         if not t:
             continue
 
-        data = get_fmp_data(t)
+        ticker_data = get_fmp_data(t)
 
-        if not data:
+        market_data = get_market_data(t)
+        dollar_volume = market_data.get("dollar_volume", 0)
+
+        if not ticker_data:
             lines.append(f"{t} | NO_DATA | BUY_BLOCKED | NOT_ELIGIBLE")
             continue
 
         listing = parse_date(
-            data["profile"].get("ipoDate")
+            ticker_data["profile"].get("ipoDate")
         )
 
         if not listing:
@@ -146,28 +149,40 @@ def build_eligibility_series(
 
         ipo_ok = listing >= cutoff
         if ipo_ok:
-            eligibility = pd.Timestamp(cutoff) - pd.Timestamp(listing)
-            eligibility = str(eligibility)
+            expiry = listing + relativedelta(years=years_back)
+            days_left = (expiry - today).days
+            
+            days_left = str(days_left)
         else:
-            eligibility = "NOT_ELIGIBLE"
+            days_left = "NOT_ELIGIBLE"
 
-        mcap = data["quote"].get("marketCap")
-        mcap_ok = (
-            isinstance(mcap, (int, float))
-            and mcap >= min_mcap
-        )
+        mcap = ticker_data["quote"].get("marketCap")
 
-        status = (
-            "BUY_ALLOWED"
-            if (ipo_ok and mcap_ok)
-            else "BUY_BLOCKED"
-        )
+        mcap_ok = mcap is not None and mcap >= MIN_MARKET_CAP
+
+        liq_ok = (dollar_volume >= MIN_DOLLAR_VOLUME)
+
+        if ipo_ok and mcap_ok and liq_ok:
+            status = "BUY_ALLOWED"
+        else:
+            reasons = []
+            if not ipo_ok:
+                reasons.append("IPO_OUT_OF_WINDOW")
+            if not mcap_ok:
+                reasons.append("MCAP_TOO_SMALL")
+            if not liq_ok:
+                reasons.append("ILLIQUID")
+            status = "BUY_BLOCKED:" + "+".join(reasons)
 
         lines.append(
             f"{t} | "
+            f"IPO={listing} | "
             f"IPO_OK={ipo_ok} | "
-            f"MCAP={mcap} | "
-            f"DAYS_ELIGIBILITY_LEFT={eligibility}"
+            f"DAYS_LEFT={days_left}"
+            f"MCAP={fmt_billions(mcap)} | "
+            f"MCAP_OK={mcap_ok} | "
+            f"DOLLAR_VOL={fmt_millions(dollar_volume)} | "
+            f"LIQ_OK={liq_ok} | "
             f"{status}"
         )
 
@@ -196,6 +211,14 @@ def build_eligibility_series_from_universe(universe: list[dict]) -> str:
         listing = parse_date(c.get("listing_date"))
         ipo_ok = listing is not None and listing >= cutoff
 
+        if ipo_ok and listing is not None:
+            expiry = listing + relativedelta(years=3)
+            days_left = (expiry - today).days
+            
+            days_left = str(days_left)
+        else:
+            days_left = "NOT_ELIGIBLE"
+
         mcap = safe_float(c.get("market_cap"))
         mcap_ok = mcap is not None and mcap >= MIN_MARKET_CAP
 
@@ -217,6 +240,7 @@ def build_eligibility_series_from_universe(universe: list[dict]) -> str:
             f"{ticker} | "
             f"IPO={c.get('listing_date')} | "
             f"IPO_OK={ipo_ok} | "
+            f"DAYS_LEFT={days_left} | "
             f"MCAP={fmt_billions(mcap)} | "
             f"MCAP_OK={mcap_ok} | "
             f"DOLLAR_VOL={fmt_millions(c.get('dollar_volume'))} | "
