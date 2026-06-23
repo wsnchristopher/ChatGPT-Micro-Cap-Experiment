@@ -5,7 +5,7 @@ from datetime import datetime
 from ..prompts.prompt_assembly import *
 from ..prompts.starting_prompt import create_starting_prompt
 
-def prompt_deepseek(text: str, model: str = "deepseek-chat") -> str:
+def prompt_deepseek(text: str, model: str) -> str:
 
     deepseek_client = OpenAI(
     api_key=os.environ["DEEPSEEK_API_KEY"],
@@ -26,8 +26,7 @@ def prompt_deepseek(text: str, model: str = "deepseek-chat") -> str:
 
     return content
 
-
-def prompt_chatgpt(text: str, model: str = "gpt-4.1-mini") -> str:
+def prompt_chatgpt(text: str, model: str) -> str:
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     response = client.chat.completions.create(
         model=model,
