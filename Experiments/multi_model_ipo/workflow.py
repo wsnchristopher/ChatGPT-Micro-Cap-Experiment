@@ -12,7 +12,8 @@ load_dotenv()
 # TODO: LIMIT orders missing limit_price from model output causing market_cap = 0, triggering false rejections
 # TODO: filter_orders incorrectly rejecting BUY_ALLOWED tickers due to above lookup failures
 
-MODELS = ["deepseek", "gpt-4.1"]
+MODELS = ["gpt-5.4-mini", "gpt-5.4-nano", "deepseek-v4-pro", "deepseek-v4-flash", "claude-sonnet-4-6", "claude-opus-4-8",
+         "grok-4.3", "grok-3"]
 
 TODAY = pd.Timestamp.now().date()
 
